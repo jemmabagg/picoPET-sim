@@ -79,7 +79,7 @@ def add_pet(sim, name="pet", create_housing=True, create_mat=True, debug=False):
     module.color = red
     translations_ring, rotations_ring = get_circular_repetition(
         # 18 -> 2
-        16, [175 * mm, 0, 0], start_angle_deg=190, axis=[0, 0, 1] #changing the number of modules that are around the ring, also changes the size of the ring (175 default)
+        16, [320 * mm, 0, 0], start_angle_deg=190, axis=[0, 0, 1] #changing the number of modules that are around the ring, also changes the size of the ring (175 default)
     )
     module.translation = translations_ring
     module.rotation = rotations_ring

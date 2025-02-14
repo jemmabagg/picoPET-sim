@@ -48,8 +48,8 @@ if __name__ == "__main__":
     # world
     world = sim.world
     ## change
-    world.size = [0.5 * m, 0.5 * m, 0.5 * m]
-   # world.size = [1 * m, 1 * m, 1 * m]
+    #world.size = [0.5 * m, 0.5 * m, 0.5 * m]
+    world.size = [1.2 * m, 1.2 * m, 1.2 * m]
 
     world.material = "G4_AIR" #setting the world material to air 
 

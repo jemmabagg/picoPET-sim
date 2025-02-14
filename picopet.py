@@ -54,8 +54,8 @@ def add_pet(sim, name="pet", create_housing=True, create_mat=True, debug=False):
     pet = sim.add_volume("Tubs", name)
     #pet.rmax = 500 * mm
     #pet.rmin = 254 * mm
-    pet.rmax = 205 * mm
-    pet.rmin = 165 * mm
+    pet.rmax = 350 * mm #if you are changing the ring size you need to change the ring volume
+    pet.rmin = 310 * mm
     pet.dz = 60 * mm / 2.0
     pet.color = gray
     pet.material = "G4_AIR"

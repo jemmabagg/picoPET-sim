@@ -49,7 +49,7 @@ if __name__ == "__main__":
     world = sim.world
     ## change
     #world.size = [0.5 * m, 0.5 * m, 0.5 * m]
-    world.size = [1.2 * m, 1.2 * m, 1.2 * m]
+    world.size = [0.5 * m, 0.5 * m, 0.5 * m]
 
     world.material = "G4_AIR" #setting the world material to air 
 
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     
     #dd a simple waterbox with a hot sphere inside
     waterbox = sim.add_volume("Box", "waterbox") #ORIGINAL
-    waterbox.size = [12 * cm, 12 * cm, 12 * cm]
+    waterbox.size = [6 * cm, 6 * cm, 6 * cm]
 
     '''
     #creating a cylinder waterbox
@@ -135,8 +135,8 @@ if __name__ == "__main__":
     #    source.activity = 1e5 * Bq * total_yield
     source.half_life = 6586.26 * sec
 
-    source.position.type = "sphere"
-    source.position.radius = 6 * cm
+    #source.position.type = "sphere"
+    #source.position.radius = 6 * cm
  
 
     # add IEC phantom

@@ -60,56 +60,45 @@ def add_pet(sim, name="pet", create_housing=True, create_mat=True, debug=False):
     pet.color = gray
     pet.material = "G4_AIR"
 
-    # ------------------------------------------
-    # 18 modules
-    #   of 4x5 stack
-    #       of 4x4 die
-    #           of 2x2 crystal
-    # ------------------------------------------
-    #the hierarchy from the the bottom up is crystal->die (2x2 crystals) -> stack (NxM) dies? -> module (AxB stacks?)
 
-    # Module (each module has 4x1 stacks)
+    # Module 
     #The modules are the detectors all around the ring
     module = sim.add_volume("Box", f"{name}_module")
     module.mother = pet.name
-    module.size = [24 * mm, 24 * mm, 15 * mm] #Matching size with Simon
-    #module.size = [19 * mm, 32.85 * mm, 33.6 * mm] #ORIGINAL
-    #module.size = [19 * mm, 80 * mm, 33.6 * mm]
+    # x is the length of the scintillator, y is tangential to that, z is axis around which detectors are placed
+    module.size = [15 * mm, 24 * mm, 24 * mm] #Matching size with Simon
     module.material = "ABS"
     module.color = red
     translations_ring, rotations_ring = get_circular_repetition(
         # 18 -> 2
-        16, [160 * mm, 0, 0], start_angle_deg=0, axis=[0, 0, 1] #changing the number of modules that are around the ring, also changes the size of the ring (175 default)
+        16, [140*mm + module.size[0]/2 * mm, 0, 0], start_angle_deg=0, axis=[0, 0, 1] #changing the number of modules that are around the ring, also changes the size of the ring (175 default)
     )
     module.translation = translations_ring
     module.rotation = rotations_ring
 
-    # Stack (each stack has 4x4 die)
+    # Stack (each stack has 4x4 diedie)
     stack = sim.add_volume("Box", f"{name}_stack")
     stack.mother = module.name
-    stack.size = [module.size[0], 24 * mm, 15 * mm] #Matching size with Simon
-    #stack.size = [module.size[0], 80 * mm, 32.6 * mm]
+    stack.size = [module.size[0], module.size[1], module.size[2]] #Matching size with Simon
     stack.material = "G4_AIR"
-    #stack.translation = get_grid_repetition([1, 1, 1], [0, 32.85 * mm, 32.85 * mm]) ORIGINAL
-    stack.translation = get_grid_repetition([1, 1, 1], [0, 24 * mm, 15 * mm])
+    stack.translation = get_grid_repetition([1, 1, 1], [0 * mm, 0 * mm, 0 * mm])
     stack.color = green
 
     # Die (each die has 2x2 crystal)
     die = sim.add_volume("Box", f"{name}_die")
     die.mother = stack.name
-    die.size = [module.size[0], 6 * mm, 15 * mm] #Matching size with Simon
-    #die.size = [module.size[0], 40 * mm, 8 * mm]
+    die.size = [stack.size[0], stack.size[1]/4, stack.size[2]/4] #Matching size with Simon
     die.material = "G4_AIR"
-    die.translation = get_grid_repetition([1, 4, 1], [0, 6 * mm, 0 * mm])
+    die.translation = get_grid_repetition([1, 4, 4], [0, stack.size[1]/4, stack.size[2]/4])
     die.color = white
 
     # Crystal
     crystal = sim.add_volume("Box", f"{name}_crystal")
     crystal.mother = die.name
-    crystal.size = [module.size[0], 3 * mm, 3 * mm] #Matching size with Simon
+    crystal.size = [die.size[0], die.size[1]/2, die.size[2]/2] #Matching size with Simon
     #crystal.size = [module.size[0], 20 * mm, 4 * mm]
     crystal.material = "LYSO"
-    crystal.translation = get_grid_repetition([1, 2, 5], [0, 3 * mm, 3 * mm])
+    crystal.translation = get_grid_repetition([1, 2, 2], [0 * mm, die.size[1]/2, die.size[2]/2])
 
     # with debug mode, only very few crystal to decrease the number of created
     # volumes, speed up the visualization

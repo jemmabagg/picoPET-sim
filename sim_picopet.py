@@ -56,35 +56,9 @@ if __name__ == "__main__":
     # add the Philips Vereos PET
     pet = pet_vereos.add_pet(sim, "pet", create_housing=False)
 
-    # If visu is enabled, we simplified the PET system, otherwise it is too slow
-    #if sim.visu:
-    #    module = sim.volume_manager.get_volume("pet_module")
-    #    # only 2 repetition instead of 18
-    #    translations_ring, rotations_ring = get_circular_repetition(
-    #        2, [391.5 * mm, 0, 0], start_angle_deg=190, axis=[0, 0, 1]
-    #    )
-    #    module.translation = translations_ring
-    #    module.rotation = rotations_ring
-
-    # add table
-    #bed = pet_vereos.add_table(sim, "pet")
-
-    #iec_phantom = gate_iec.add_iec_phantom(sim, 'iec_phantom')
-    #activities = [3 * Bq, 4 * Bq, 5 * Bq, 6 * Bq, 9 * Bq, 12 * Bq]
-    #iec_source = gate_iec.add_spheres_sources(sim, 'iec_phantom', 'iec_source', 'all', activities)
-
-
-    #cylinder_source = gate_iec.add_central_cylinder_source(sim, "iec_phantom", "cylinder_source", activity_Bq_mL=0.000000001, verbose=False)
-    #iec_bg_source = gate_iec.add_background_source(sim, 'iec_phantom', 'iec_bg_source', 0.1 * Bq)
-
-    # List of IEC phantom sphere names
-
-    #jaszczak_phantom = gate_jaszczak.add_jaszczak_phantom(sim)
-    #jaszczak_source = gate_jaszczak.add_background_source(sim, jaszczak_name="jaszczak", src_name="source", activity_bqml=1e-14)
-    
     #dd a simple waterbox with a hot sphere inside
     waterbox = sim.add_volume("Box", "waterbox") #ORIGINAL
-    waterbox.size = [6 * cm, 6 * cm, 6 * cm]
+    waterbox.size = [18 * cm, 18 * cm, 18 * cm]
 
     '''
     #creating a cylinder waterbox
@@ -98,8 +72,8 @@ if __name__ == "__main__":
     waterbox.material = "G4_WATER"
     waterbox.color = [0, 0, 1, 1]
     
-    '''
-    hot_sphere = sim.add_volume("Sphere", "hot_sphere")
+    
+    '''hot_sphere = sim.add_volume("Sphere", "hot_sphere")
     hot_sphere.mother = waterbox.name
     hot_sphere.rmax = 2 * cm
     hot_sphere.translation = [4 * cm, 2 * cm , 0]
@@ -110,16 +84,17 @@ if __name__ == "__main__":
     hot_source = sim.add_source("GenericSource", "hot_sphere_source")
     hot_source.attached_to = "hot_sphere"
     hot_source.position.type = "sphere"
-    #hot_source.position.radius = 2 * cm #Same as the hot sphere size
+    hot_source.position.radius = 2 * cm #Same as the hot sphere size
     hot_source.particle = "e+"
     hot_source.energy.type = "F18"
-    hot_source.activity = 5e5 * Bq #Higher activity than the waterbox
+    hot_source.activity = 3e5* Bq #Higher activity than the waterbox
     hot_source.half_life = 6586.26 * sec
-    '''
+    
+    total_yield = get_rad_yield("F18")'''
  
     # source for tests
-    source = sim.add_source("GenericSource", "waterbox_source")
     total_yield = get_rad_yield("F18")
+    source = sim.add_source("GenericSource", "waterbox_source")
     print("Yield for F18 (nb of e+ per decay) : ", total_yield)
     source.attached_to = "waterbox"
 
@@ -130,32 +105,29 @@ if __name__ == "__main__":
 
     source.particle = "e+"
     source.energy.type = "F18"
-    source.activity = 1e6 * Bq * total_yield
+    source.activity = 370e6 * Bq * total_yield
     #if sim.visu:
     #    source.activity = 1e5 * Bq * total_yield
     source.half_life = 6586.26 * sec
 
-    #source.position.type = "sphere"
-    #source.position.radius = 6 * cm
- 
+    source.position.type = "point"
+    
 
-    # add IEC phantom
-    #iec_phantom = gate_iec.add_iec_phantom(sim, "iec")
-    #iec_phantom.translation = [0 * cm, 0 * cm, 0 * cm]
+    '''second_sphere = sim.add_volume("Sphere", "second_hot_sphere")
+    second_sphere.mother = waterbox.name  # still inside the waterbox
+    second_sphere.rmax = 2 * cm
+    second_sphere.translation = [-2 * cm, -2 * cm, 0 * cm]  # different position
+    second_sphere.material = "G4_WATER"
+    second_sphere.color = [1, 0.5, 0, 1]  # orange
 
-    # source for tests
-    #total_yield = get_rad_yield("Ga68")
-    #print("Yield for Ga68 (nb of e+ per decay) : ", total_yield)
-    #a = 1e3* BqmL * total_yield
-    #if sim.visu:
-    #    a = 1e2 * BqmL * total_yield
-    #activities = [a] * 6
-    #sources = gate_iec.add_spheres_sources(sim, "iec", "iec_source", "all", activities)
-    #for source in sources:
-    #    source.particle = "e+"
-    #    source.energy.type = "Ga68"
-    #    source.half_life = 67.71 * 60 * sec
-
+    second_source = sim.add_source("GenericSource", "second_hot_sphere_source")
+    second_source.attached_to = "second_hot_sphere"
+    second_source.position.type = "sphere"
+    second_source.position.radius = 2 * cm  # same as the sphere
+    second_source.particle = "e+"
+    second_source.energy.type = "F18"
+    second_source.activity = 3e5 * Bq * total_yield  # lower activity than first?
+    second_source.half_life = 6586.26 * sec '''
 
     # physics
     sim.physics_manager.physics_list_name = "G4EmStandardPhysics_option3"
@@ -172,7 +144,7 @@ if __name__ == "__main__":
     stats.output_filename = "stats_vereos.txt"
 
     # timing
-    sim.run_timing_intervals = [[0, 10 * sec]]
+    sim.run_timing_intervals = [[0, 0.1 * sec]]
 
     # go
     sim.run()

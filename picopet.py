@@ -1,6 +1,8 @@
 from scipy.spatial.transform import Rotation
 from opengate.utility import g4_units
 from opengate.geometry.utility import get_grid_repetition, get_circular_repetition
+import json
+import math
 
 # colors (similar to the ones of Gate)
 red = [1, 0, 0, 1]
@@ -180,5 +182,111 @@ def add_pet(sim, name="pet", create_housing=True, create_mat=True, debug=False):
     cover.material = "Lexan"
     cover.color = white
     cover.color = red
+
+    return pet
+
+def add_scanner(sim, scanner_file, name="pet", create_mat=True):
+    # Read in scanner dimensions
+    with open(scanner_file, "r") as file:
+        config = json.load(file)
+    ring_config = config["ring"]
+    module__config = config["module"]
+    crystal_config = config["crystal"]
+    multi_ring_config = config["multi_ring"]
+
+    # Units
+    mm = g4_units.mm
+
+    # Calculate dimensions and translations
+    if not module__config["rotation"]:
+        # dimensions
+        module_dim = [crystal_config["length"], module__config["no_sipms"][0] * module__config["sipm_size"], module__config["no_sipms"][1] * module__config["sipm_size"]]
+        sipm_chan_dim = [module_dim[0], module__config["sipm_size"], module__config["sipm_size"]]
+        crystal_dim = [crystal_config["length"], module__config["sipm_size"] / math.sqrt(crystal_config["crystals_per_sipm"]), module__config["sipm_size"] / math.sqrt(crystal_config["crystals_per_sipm"])]
+
+        # translations
+        sipm_chan_trans = [[1, module__config["no_sipms"][0], module__config["no_sipms"][1]], [0, module__config["sipm_size"] * mm, module__config["sipm_size"] * mm]]
+        crystal_trans = [[1, int(math.sqrt(crystal_config["crystals_per_sipm"])), int(math.sqrt(crystal_config["crystals_per_sipm"]))], [0, crystal_dim[1] * mm, crystal_dim[2] * mm]]
+
+    else:  
+        # dimensions
+        module_dim = [module__config["no_sipms"][0] * module__config["sipm_size"], crystal_config["length"], module__config["no_sipms"][1] * module__config["sipm_size"]]
+        sipm_chan_dim = [module__config["sipm_size"], crystal_config["length"], module__config["sipm_size"]]
+        crystal_dim = [module__config["sipm_size"] / math.sqrt(crystal_config["crystals_per_sipm"]), crystal_config["length"], module__config["sipm_size"] / math.sqrt(crystal_config["crystals_per_sipm"])]
+
+        # translations
+        sipm_chan_trans = [[module__config["no_sipms"][0], 1, module__config["no_sipms"][1]], [module__config["sipm_size"] * mm, 0, module__config["sipm_size"] * mm]]
+        crystal_trans = [[int(math.sqrt(crystal_config["crystals_per_sipm"])), 1, int(math.sqrt(crystal_config["crystals_per_sipm"]))], [crystal_dim[0] * mm, 0, crystal_dim[2] * mm]]
+
+    # DOI
+    if crystal_config["doi_resolution"] > 0:
+        # Get possible DOI
+        length_factors = [i for i in range(1, crystal_config["length"] + 1) if crystal_config["length"] % i == 0]
+        doi = min(length_factors, key=lambda num: abs(num - crystal_config["doi_resolution"]))
+        no_divisions = int(crystal_config["length"] / doi)
+
+        # Cut crystals
+        if not module__config["rotation"]:
+            # change sipm channel and crystal dimensions
+            sipm_chan_dim[0] = sipm_chan_dim[0] / no_divisions
+            crystal_dim[0] = crystal_dim[0] / no_divisions
+
+            # sipm channel translations
+            sipm_chan_trans = [[no_divisions, module__config["no_sipms"][0], module__config["no_sipms"][1]], [doi, module__config["sipm_size"] * mm, module__config["sipm_size"] * mm]]
+        else:
+            # change sipm channel and crystal dimensions
+            sipm_chan_dim[1] = sipm_chan_dim[1] / no_divisions
+            crystal_dim[1] = crystal_dim[1] / no_divisions
+
+            # sipm channel translations
+            sipm_chan_trans = [[module__config["no_sipms"][0], no_divisions, module__config["no_sipms"][1]], [module__config["sipm_size"] * mm, doi, module__config["sipm_size"] * mm]]
+
+    # Define Materials
+    if create_mat:
+        create_material(sim)
+
+    # Add Scanner Volume
+    pet = sim.add_volume("Tubs", name)
+    pet.rmax = (ring_config["inner_radius"] + ring_config["module_buffer"] + module_dim[0]) * mm
+    pet.rmin = (ring_config["inner_radius"] - ring_config["module_buffer"]) * mm
+    scanner_depth = (module_dim[2] * multi_ring_config["no_rings"] + multi_ring_config["space"] * (multi_ring_config["no_rings"] - 1))
+    pet.dz = (scanner_depth / 2) * mm
+    pet.color = white
+    pet.color = white
+    pet.material = "G4_AIR"
+
+    # Add Modules
+    module = sim.add_volume("Box", f"{name}_module")
+    module.mother = pet.name
+    module.size = [module_dim[0] * mm, module_dim[1] * mm, module_dim[2] * mm]
+    module.material = "ABS"
+    module.color = red
+    translations = []
+    rotations = []
+    for ring_no in range(multi_ring_config["no_rings"]):
+        # calculate the z_offset
+        z_offset = (-0.5 * scanner_depth  + 0.5 * module_dim[2] + module_dim[2] * ring_no + multi_ring_config["space"] * ring_no) * mm
+        trans, rot = get_circular_repetition(
+            ring_config["no_modules"], [(ring_config["inner_radius"] + module_dim[0] / 2) * mm, 0, z_offset], start_angle_deg=90, axis=[0, 0, 1]
+        )
+        translations.extend(trans)
+        rotations.extend(rot)
+    module.translation = translations
+    module.rotation = rotations
+
+    # Add SiPM Channels
+    sipm_channel = sim.add_volume("Box", f"{name}_sipm_channel")
+    sipm_channel.mother = module.name
+    sipm_channel.size = [sipm_chan_dim[0] * mm, sipm_chan_dim[1] * mm, sipm_chan_dim[2] * mm]
+    sipm_channel.material = "G4_AIR"
+    sipm_channel.translation = get_grid_repetition(sipm_chan_trans[0], sipm_chan_trans[1])
+    sipm_channel.color = white
+
+    # Add Crystals
+    crystal = sim.add_volume("Box", f"{name}_crystal")
+    crystal.mother = sipm_channel.name
+    crystal.size = [crystal_dim[0] * mm, crystal_dim[1] * mm, crystal_dim[2] * mm]
+    crystal.material = "LYSO"
+    crystal.translation = get_grid_repetition(crystal_trans[0], crystal_trans[1])
 
     return pet

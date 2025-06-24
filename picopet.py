@@ -54,10 +54,15 @@ def add_pet(sim, name="pet", create_housing=True, create_mat=True, debug=False):
 
     # ring volume
     pet = sim.add_volume("Tubs", name)
-    #pet.rmax = 500 * mm
-    #pet.rmin = 254 * mm
+   
+    #Dimensions for smaller PET scan
     pet.rmax = 180 * mm #if you are changing the ring size you need to change the ring volume
     pet.rmin = 140 * mm
+
+    #Keaveney Dimensions
+    #pet.rmax = 250 * mm
+    #pet.rmin = 185 * mm
+
     pet.dz = 60 * mm / 2.0
     pet.color = gray
     pet.material = "G4_AIR"
@@ -73,7 +78,7 @@ def add_pet(sim, name="pet", create_housing=True, create_mat=True, debug=False):
     module.color = red
     translations_ring, rotations_ring = get_circular_repetition(
         # 18 -> 2
-        16, [140*mm + module.size[0]/2 * mm, 0, 0], start_angle_deg=0, axis=[0, 0, 1] #changing the number of modules that are around the ring, also changes the size of the ring (175 default)
+        32, [140*mm + module.size[0]/2 * mm, 0, 0], start_angle_deg=0, axis=[0, 0, 1] #changing the number of modules that are around the ring, also changes the size of the ring (175 default)
     )
     module.translation = translations_ring
     module.rotation = rotations_ring
@@ -102,11 +107,49 @@ def add_pet(sim, name="pet", create_housing=True, create_mat=True, debug=False):
     crystal.material = "LYSO"
     crystal.translation = get_grid_repetition([1, 2, 2], [0 * mm, die.size[1]/2, die.size[2]/2])
 
+    '''#KEaveney dimensions for anthropomorphic phantom
+    # Module (each module has 4x1 stacks)
+    module = sim.add_volume("Box", f"{name}_module")
+    module.mother = pet.name
+    #module.size = [19 * mm, 131.4 * mm, 33.6 * mm]
+    module.size = [19 * mm, 32.85 * mm, 33.6 * mm]
+    module.material = "ABS"
+    module.color = red
+    translations_ring, rotations_ring = get_circular_repetition(
+        # 18 -> 2
+        31, [195 * mm, 0, 0], start_angle_deg=190, axis=[0, 0, 1]
+    )
+    module.translation = translations_ring
+    module.rotation = rotations_ring
+
+    # Stack (each stack has 4x4 die)
+    stack = sim.add_volume("Box", f"{name}_stack")
+    stack.mother = module.name
+    stack.size = [module.size[0], 32.6 * mm, 32.6 * mm]
+    stack.material = "G4_AIR"
+    stack.translation = get_grid_repetition([1, 1, 1], [0, 32.85 * mm, 32.85 * mm])
+    stack.color = green
+
+    # Die (each die has 2x2 crystal)
+    die = sim.add_volume("Box", f"{name}_die")
+    die.mother = stack.name
+    die.size = [module.size[0], 8 * mm, 8 * mm]
+    die.material = "G4_AIR"
+    die.translation = get_grid_repetition([1, 4, 4], [0, 8 * mm, 8 * mm])
+    die.color = white
+
+    # Crystal
+    crystal = sim.add_volume("Box", f"{name}_crystal")
+    crystal.mother = die.name
+    crystal.size = [module.size[0], 4 * mm, 4 * mm]
+    crystal.material = "LYSO"
+    crystal.translation = get_grid_repetition([1, 2, 2], [0, 4 * mm, 4 * mm])
+
     # with debug mode, only very few crystal to decrease the number of created
     # volumes, speed up the visualization
     if debug:
         crystal.size = [module.size[0], 8 * mm, 8 * mm]
-        crystal.translation = get_grid_repetition([1, 1, 1], [0, 4 * mm, 4 * mm])
+        crystal.translation = get_grid_repetition([1, 1, 1], [0, 4 * mm, 4 * mm])'''
 
     # ------------------------------------------
     # Housing
@@ -264,13 +307,23 @@ def add_scanner(sim, scanner_file, name="pet", create_mat=True):
     translations = []
     rotations = []
     for ring_no in range(multi_ring_config["no_rings"]):
+        # get angular offset
+        if ring_config["pattern"] == "checkered" and ring_no % 2 == 0:
+            angular_offset = (360 / ring_config["no_modules"]) / 2
+        else:
+            angular_offset = 0
+
         # calculate the z_offset
         z_offset = (-0.5 * scanner_depth  + 0.5 * module_dim[2] + module_dim[2] * ring_no + multi_ring_config["space"] * ring_no) * mm
+
+        # get translations
         trans, rot = get_circular_repetition(
-            ring_config["no_modules"], [(ring_config["inner_radius"] + module_dim[0] / 2) * mm, 0, z_offset], start_angle_deg=90, axis=[0, 0, 1]
+            ring_config["no_modules"], [(ring_config["inner_radius"] + module_dim[0] / 2) * mm, 0, z_offset], start_angle_deg=90 + angular_offset, axis=[0, 0, 1]
         )
         translations.extend(trans)
         rotations.extend(rot)
+
+    # Translate Modules
     module.translation = translations
     module.rotation = rotations
 
@@ -286,7 +339,158 @@ def add_scanner(sim, scanner_file, name="pet", create_mat=True):
     crystal = sim.add_volume("Box", f"{name}_crystal")
     crystal.mother = sipm_channel.name
     crystal.size = [crystal_dim[0] * mm, crystal_dim[1] * mm, crystal_dim[2] * mm]
-    crystal.material = "LYSO"
+    crystal.material = crystal_config["material"]
     crystal.translation = get_grid_repetition(crystal_trans[0], crystal_trans[1])
+
+    return pet
+
+def add_philips(sim, name="pet", create_housing=True, create_mat=True, debug=False):
+    """
+    Geometry of a PET Philips VEREOS
+    Salvadori J, Labour J, Odille F, Marie PY, Badel JN, Imbert L, Sarrut D.
+    Monte Carlo simulation of digital photon counting PET.
+    EJNMMI Phys. 2020 Apr 25;7(1):23.
+    doi: 10.1186/s40658-020-00288-w
+    """
+
+    # unit
+    mm = g4_units.mm
+
+    # define the materials (if needed)
+    if create_mat:
+        create_material(sim)
+
+    # ring volume
+    pet = sim.add_volume("Tubs", name)
+    pet.rmax = 500 * mm
+    pet.rmin = 354 * mm
+    pet.dz = 392 * mm / 2.0
+    pet.color = gray
+    pet.material = "G4_AIR"
+
+    # ------------------------------------------
+    # 18 modules
+    #   of 4x5 stack
+    #       of 4x4 die
+    #           of 2x2 crystal
+    # ------------------------------------------
+
+    # Module (each module has 4x5 stacks)
+    module = sim.add_volume("Box", f"{name}_module")
+    module.mother = pet.name
+    module.size = [19 * mm, 131.4 * mm, 164 * mm]
+    module.material = "ABS"
+    module.color = blue
+    translations_ring, rotations_ring = get_circular_repetition(
+        18, [391.5 * mm, 0, 0], start_angle_deg=190, axis=[0, 0, 1]
+    )
+    module.translation = translations_ring
+    module.rotation = rotations_ring
+
+    # Stack (each stack has 4x4 die)
+    stack = sim.add_volume("Box", f"{name}_stack")
+    stack.mother = module.name
+    stack.size = [module.size[0], 32.6 * mm, 32.6 * mm]
+    stack.material = "G4_AIR"
+    stack.translation = get_grid_repetition([1, 4, 5], [0, 32.85 * mm, 32.85 * mm])
+    stack.color = green
+
+    # Die (each die has 2x2 crystal)
+    die = sim.add_volume("Box", f"{name}_die")
+    die.mother = stack.name
+    die.size = [module.size[0], 8 * mm, 8 * mm]
+    die.material = "G4_AIR"
+    die.translation = get_grid_repetition([1, 4, 4], [0, 8 * mm, 8 * mm])
+    die.color = white
+
+    # Crystal
+    crystal = sim.add_volume("Box", f"{name}_crystal")
+    crystal.mother = die.name
+    crystal.size = [module.size[0], 4 * mm, 4 * mm]
+    crystal.material = "LYSO"
+    crystal.translation = get_grid_repetition([1, 2, 2], [0, 4 * mm, 4 * mm])
+
+    # with debug mode, only very few crystal to decrease the number of created
+    # volumes, speed up the visualization
+    if debug:
+        crystal.size = [module.size[0], 8 * mm, 8 * mm]
+        crystal.translation = get_grid_repetition([1, 1, 1], [0, 4 * mm, 4 * mm])
+
+    # ------------------------------------------
+    # Housing
+    # ------------------------------------------
+
+    if not create_housing:
+        return pet
+
+    # SiPMs HOUSING
+    housing = sim.add_volume("Box", f"{name}_housing")
+    housing.mother = pet.name
+    housing.size = [1 * mm, 131 * mm, 164 * mm]
+    housing.material = "G4_AIR"
+    housing.color = yellow
+    translations_ring, rotations_ring = get_circular_repetition(
+        18, [408 * mm, 0, 0], start_angle_deg=190, axis=[0, 0, 1]
+    )
+    housing.translation = translations_ring
+    housing.rotation = rotations_ring
+
+    # SiPMs UNITS
+    sipms = sim.add_volume("Box", f"{name}_sipms")
+    sipms.mother = housing.name
+
+    sipms.size = [1 * mm, 32.6 * mm, 32.6 * mm]
+    spacing = 32.8 * mm
+    sipms.translation = get_grid_repetition([1, 4, 5], [0, spacing, spacing])
+    sipms.rotation = None
+    sipms.material = "G4_AIR"
+    sipms.color = green
+
+    # cooling plate
+    coolingplate = sim.add_volume("Box", f"{name}_coolingplate")
+    coolingplate.mother = pet.name
+    coolingplate.size = [30 * mm, 130.2 * mm, 164 * mm]
+    coolingplate.material = "Copper"
+    coolingplate.color = blue
+    translations_ring, rotations_ring = get_circular_repetition(
+        18, [430 * mm, 0, 0], start_angle_deg=190, axis=[0, 0, 1]
+    )
+    coolingplate.translation = translations_ring
+    coolingplate.rotation = rotations_ring
+
+    # ------------------------------------------
+    # Shielding
+    # ------------------------------------------
+
+    # end shielding 1
+    endshielding1 = sim.add_volume("Tubs", f"{name}_endshielding1")
+    endshielding1.mother = pet.name
+    endshielding1.translation = [0, 0, 95 * mm]
+    endshielding1.rmax = 410 * mm
+    endshielding1.rmin = 362.5 * mm
+    endshielding1.dz = 25 * mm / 2.0
+    endshielding1.material = "Lead"
+    endshielding1.color = yellow
+
+    # end shielding 2
+    endshielding2 = sim.add_volume("Tubs", f"{name}_endshielding2")
+    endshielding2.mother = pet.name
+    endshielding2.translation = [0, 0, -95 * mm]
+    endshielding2.rmax = 410 * mm
+    endshielding2.rmin = 362.5 * mm
+    endshielding2.dz = 25 * mm / 2.0
+    endshielding2.material = "Lead"
+    endshielding2.color = yellow
+
+    # cover Lexan layer
+    cover = sim.add_volume("Tubs", f"{name}_cover")
+    cover.mother = pet.name
+    cover.translation = [0, 0, 0]
+    cover.rmax = 355.5 * mm
+    cover.rmin = 354 * mm
+    cover.dz = 392 * mm / 2.0 * mm
+    cover.material = "Lexan"
+    cover.color = white
+    cover.color = red
 
     return pet

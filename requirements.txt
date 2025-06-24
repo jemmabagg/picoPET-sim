@@ -1,0 +1,27 @@
+# Core scientific stack
+numpy==1.26.4
+scipy==1.15.1
+matplotlib==3.10.0
+pandas==2.2.3
+
+# Jupyter + notebook support
+jupyter==1.0.0
+ipykernel==6.29.5
+
+# Imaging & medical data formats
+h5py==3.13.0
+SimpleITK==2.4.1
+nibabel==5.3.2
+pydicom==3.0.1
+
+# PyTorch for deep learning support
+torch==2.6.0
+
+# Progress and UX helpers
+tqdm==4.67.1
+
+# PET-specific / reconstruction tools
+pytomography==3.3.2
+gatetools==0.12.6
+opengate==10.0.1
+

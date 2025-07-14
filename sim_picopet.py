@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
     # options
     # warning the visualisation is slow !
-    sim.visu = True
+    sim.visu = False
     sim.visu_type = "qt"
     sim.random_seed = "auto"
     sim.number_of_threads = 1
@@ -48,7 +48,6 @@ if __name__ == "__main__":
     # world
     world = sim.world
     ## change
-    #world.size = [0.5 * m, 0.5 * m, 0.5 * m]
     world.size = [0.5 * m, 0.5 * m, 0.5 * m]
 
     world.material = "G4_AIR" #setting the world material to air 
@@ -60,20 +59,12 @@ if __name__ == "__main__":
     waterbox = sim.add_volume("Box", "waterbox") #ORIGINAL
     waterbox.size = [18 * cm, 18 * cm, 18 * cm]
 
-    '''
-    #creating a cylinder waterbox
-    waterbox = sim.add_volume("TubsVolume", "waterbox")
-    waterbox.rmin = 0.0 * cm
-    waterbox.rmax = 0.5 * cm
-    waterbox.dz = 1 * cm
-    '''
-
     waterbox.translation = [0 * cm, 0 * cm, 0 * cm]
     waterbox.material = "G4_WATER"
     waterbox.color = [0, 0, 1, 1]
     
-    
-    '''hot_sphere = sim.add_volume("Sphere", "hot_sphere")
+    # Add hot sphere inside waterbox
+    hot_sphere = sim.add_volume("Sphere", "hot_sphere")
     hot_sphere.mother = waterbox.name
     hot_sphere.rmax = 2 * cm
     hot_sphere.translation = [4 * cm, 2 * cm , 0]
@@ -87,30 +78,28 @@ if __name__ == "__main__":
     hot_source.position.radius = 2 * cm #Same as the hot sphere size
     hot_source.particle = "e+"
     hot_source.energy.type = "F18"
-    hot_source.activity = 3e5* Bq #Higher activity than the waterbox
+
+    total_yield = get_rad_yield("F18")
+    print("Yield for F18 (nb of e+ per decay) : ", total_yield)
+
+    hot_source.activity = 3e6 * Bq / total_yield #Higher activity than the waterbox
     hot_source.half_life = 6586.26 * sec
     
-    total_yield = get_rad_yield("F18")'''
- 
-    # source for tests
-    total_yield = get_rad_yield("F18")
-    source = sim.add_source("GenericSource", "waterbox_source")
-    print("Yield for F18 (nb of e+ per decay) : ", total_yield)
-    source.attached_to = "waterbox"
+    #source.attached_to = "waterbox"
 
     #creating spherical source
     #source.distribution_type = "Volume"
     #source.shape = "Sphere"
     #source.radius = 0.4 * cm #Positron source spread over sphere
 
-    source.particle = "e+"
-    source.energy.type = "F18"
-    source.activity = 370e6 * Bq * total_yield
+    #source.particle = "e+"
+    #source.energy.type = "F18"
+    #source.activity = 370e6 * Bq * total_yield
     #if sim.visu:
     #    source.activity = 1e5 * Bq * total_yield
-    source.half_life = 6586.26 * sec
+    #source.half_life = 6586.26 * sec
 
-    source.position.type = "point"
+    #source.position.type = "point"
     
 
     '''second_sphere = sim.add_volume("Sphere", "second_hot_sphere")
@@ -144,7 +133,7 @@ if __name__ == "__main__":
     stats.output_filename = "stats_vereos.txt"
 
     # timing
-    sim.run_timing_intervals = [[0, 0.1 * sec]]
+    sim.run_timing_intervals = [[0, 1 * sec]]
 
     # go
     sim.run()

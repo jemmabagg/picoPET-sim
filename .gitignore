@@ -3,4 +3,8 @@ opengate_env
 output
 __pycache__
 EX_brain
-LondonPride*
+PET_data
+data
+Image_Reconstruction
+datasets
+Plots

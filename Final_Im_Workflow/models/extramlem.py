@@ -6,11 +6,11 @@ class extraCNN(nn.Module):
     def __init__(self):
         super(extraCNN, self).__init__()
         self.CNN_denoise = nn.Sequential(
-            nn.Conv2d(1, 8, 7, padding=3), nn.PReLU(),
-            nn.Conv2d(8, 8, 5, padding=2), nn.PReLU(),
+            nn.Conv2d(1, 8, 3, padding=1), nn.PReLU(),
             nn.Conv2d(8, 8, 3, padding=1), nn.PReLU(),
-            nn.Conv2d(8, 8, 5, padding=2), nn.PReLU(),
-            nn.Conv2d(8, 1, 7, padding=3)
+            nn.Conv2d(8, 8, 3, padding=1), nn.PReLU(),
+            nn.Conv2d(8, 8, 3, padding=1), nn.PReLU(),
+            nn.Conv2d(8, 1, 3, padding=1)
         )
 
     def forward(self, x):

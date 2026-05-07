@@ -10,93 +10,97 @@ import gc
 #Setup
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-images_train = np.load("/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/images_train.npy")
-images_val   = np.load("/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/images_val.npy")
+images_train = np.load("/scratch/bggjem001/pet_datasets/datasets/images_train.npy")
+images_val   = np.load("/scratch/bggjem001/pet_datasets/datasets/images_val.npy")
 
 images_train = np.array([normalise(im) for im in images_train])
 images_val   = np.array([normalise(im) for im in images_val])
 
+noise_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
+
 save_every = 3
 
-for it in range(1, 40):
+for noise in noise_levels:
 
-    # Skip iterations we do not want to save
-    if it % save_every != 0:
-        continue
+    for it in range(save_every, 37, save_every):
 
-    print(f"Running MLEM iteration {it}")
+        prefix = "clean" if noise == 0 else f"noisy{noise}"
+        mlem_prefix = '' if noise == 0 else f"noisy{noise}_"
 
-    #Loading in the training, val and test data 
-    mlem_images_train = np.load(f"/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/mlem{it}_train.npy")
-    mlem_images_val = np.load(f"/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/mlem{it}_val.npy")
+        print(f"Running MLEM iteration {it}")
 
-    #Normalise the reconstructed images
-    mlem_images_train = np.array([normalise(im) for im in mlem_images_train])
-    mlem_images_val   = np.array([normalise(im) for im in mlem_images_val])
+        #Loading in the training, val and test data 
+        mlem_images_train = np.load(f"/scratch/bggjem001/pet_datasets/datasets/{mlem_prefix}mlem{it}_train.npy")
+        mlem_images_val = np.load(f"/scratch/bggjem001/pet_datasets/datasets/{mlem_prefix}mlem{it}_val.npy")
 
-    train_dataset = MLEMDataset(mlem_images_train, images_train)
-    val_dataset = MLEMDataset(mlem_images_val, images_val)
+        #Normalise the reconstructed images
+        mlem_images_train = np.array([normalise(im) for im in mlem_images_train])
+        mlem_images_val   = np.array([normalise(im) for im in mlem_images_val])
 
-    train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=10)
+        train_dataset = MLEMDataset(mlem_images_train, images_train)
+        val_dataset = MLEMDataset(mlem_images_val, images_val)
 
-    #Training the model
-    model = extraCNN().to(device)
-    loss_function = nn.MSELoss()
-    optim = torch.optim.Adam(model.parameters(), lr=1e-3)
+        train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=10)
 
-    train_loss, val_loss = [], []
-    epochs = 30
+        #Training the model
+        model = extraCNN().to(device)
+        loss_function = nn.MSELoss()
+        optim = torch.optim.Adam(model.parameters(), lr=1e-3)
 
-    for epoch in range(epochs):
+        train_loss, val_loss = [], []
+        epochs = 30
 
-        model.train()
-        running_train_loss = 0
+        for epoch in range(epochs):
 
-        for mlem_im, target in tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}", leave=False):
+            model.train()
+            running_train_loss = 0
 
-            mlem_im = mlem_im.to(device).float()
-            target = target.to(device).float()
+            for mlem_im, target in tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}", leave=False):
 
-            output = model(mlem_im)
-            loss = loss_function(output, target)
-            optim.zero_grad()
-            loss.backward()
-            optim.step()
+                mlem_im = mlem_im.to(device).float()
+                target = target.to(device).float()
 
-            running_train_loss += loss.item()
+                output = model(mlem_im)
+                loss = loss_function(output, target)
+                optim.zero_grad()
+                loss.backward()
+                optim.step()
 
-        train_loss.append(running_train_loss / len(train_loader))
+                running_train_loss += loss.item()
 
-        #Validation 
-        model.eval()
-        running_val_loss = 0
- 
-        with torch.no_grad():
+            train_loss.append(running_train_loss / len(train_loader))
 
-            for val_mlem_im, val_target in tqdm(val_loader, desc="Validation", leave=False):
+            #Validation 
+            model.eval()
+            running_val_loss = 0
+    
+            with torch.no_grad():
 
-                val_mlem_im = val_mlem_im.to(device).float()
-                val_target = val_target.to(device).float()
+                for val_mlem_im, val_target in tqdm(val_loader, desc="Validation", leave=False):
 
-                val_output = model(val_mlem_im)
-                v_loss = loss_function(val_output, val_target)
-                running_val_loss += v_loss.item()
+                    val_mlem_im = val_mlem_im.to(device).float()
+                    val_target = val_target.to(device).float()
 
-        val_loss.append(running_val_loss / len(val_loader))
-        print(f"Epoch {epoch+1} | Train Loss: {train_loss[-1]:.6f} | Val Loss: {val_loss[-1]:.6f}")
+                    val_output = model(val_mlem_im)
+                    v_loss = loss_function(val_output, val_target)
+                    running_val_loss += v_loss.item()
 
-    #Saving the model
-    torch.save(model.state_dict(), f"/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/model_weights/extra{it}.pth")
+            val_loss.append(running_val_loss / len(val_loader))
+            print(f"Epoch {epoch+1} | Train Loss: {train_loss[-1]:.6f} | Val Loss: {val_loss[-1]:.6f}")
 
-    np.save(f"/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/model_weights/extra{it}_train_loss.npy", train_loss)
-    np.save(f"/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/model_weights/extra{it}_val_loss.npy", val_loss)
+        #Saving the model
+        torch.save(model.state_dict(), f"/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/model_weights/{prefix}_extra{it}.pth")
 
-    print(f"Model {it} Trained")
+        np.save(f"/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/model_weights/{prefix}_extra{it}_train_loss.npy", train_loss)
+        np.save(f"/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/model_weights/{prefix}_extra{it}_val_loss.npy", val_loss)
 
-    del mlem_images_train, mlem_images_val, train_dataset, val_dataset, model
-    torch.cuda.empty_cache()
-    gc.collect()
+        print(f"Model {it} Trained")
+
+        del mlem_images_train, mlem_images_val, train_dataset, val_dataset, model
+        torch.cuda.empty_cache()
+        gc.collect()
+
 
 print("All models trained")
 

@@ -75,11 +75,11 @@ X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.3, r
 
 print(f"Train: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}")
 
-np.save("/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/images_train.npy", y_train)
-np.save("/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/images_val.npy", y_val)
-np.save("/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/images_test.npy", y_test)
+np.save("/scratch/bggjem001/pet_datasets/datasets/images_train.npy", y_train)
+np.save("/scratch/bggjem001/pet_datasets/datasets/images_val.npy", y_val)
+np.save("/scratch/bggjem001/pet_datasets/datasets/images_test.npy", y_test)
 
-np.save("/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/sinograms_train.npy", X_train)
-np.save("/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/sinograms_val.npy", X_val)
-np.save("/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/sinograms_test.npy", X_test)
+np.save("/scratch/bggjem001/pet_datasets/datasets/sinograms_train.npy", X_train)
+np.save("/scratch/bggjem001/pet_datasets/datasets/sinograms_val.npy", X_val)
+np.save("/scratch/bggjem001/pet_datasets/datasets/sinograms_test.npy", X_test)
 

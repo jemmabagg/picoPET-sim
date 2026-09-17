@@ -136,3 +136,4 @@ for noise in noise_levels:
     plt.tight_layout()
     plt.savefig(f"{base}/Plots/metrics_vs_iterations_{noise*10}_sn.png", dpi=300, bbox_inches='tight')
     plt.show()
+

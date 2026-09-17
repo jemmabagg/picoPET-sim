@@ -69,6 +69,7 @@ for noise in rel_noises:
             sino_noisy = add_poisson(sino, scale)
             noisy_sinograms_list.append(sino_noisy)
 
+
         noisy_sinograms[end] = np.array(noisy_sinograms_list)
 
 

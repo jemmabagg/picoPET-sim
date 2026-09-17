@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from skimage.transform import resize
 import nibabel as nib
-from utils.image_ops import crop_to_square, normalise
+from utils.image_ops import crop_to_square, normalise, sum_normalise
 from skimage.transform import resize, radon, iradon
 
 #Setup
@@ -56,30 +56,30 @@ for p in paths:
             image_cropped = crop_to_square(slice_img)
             image_resized = resize(image_cropped, (nxd,nxd), anti_aliasing=True)
 
-            #Normalise image
-            image_normalised = normalise(image_resized)
-
-            images.append(image_normalised)
-
             #Generate Sinogram by forward projecting image
-            sino = radon(image_normalised, theta=theta, circle=True)
+            sino = radon(image_resized, theta=theta, circle=True)
 
             sinograms.append(sino)
+
+            #Normalise image
+            image_normalised = sum_normalise(image_resized)
+
+            images.append(image_normalised)
 
 images = np.array(images)
 sinograms = np.array(sinograms)
 
 # Split into train, val, and test sets
-X_train, X_temp, y_train, y_temp = train_test_split(sinograms, images, test_size=0.5, random_state=42)
-X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.3, random_state=42)
+X_train, X_temp, y_train, y_temp = train_test_split(sinograms, images, test_size=0.3, random_state=42)
+X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
 
 print(f"Train: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}")
 
-np.save("/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/images_train.npy", y_train)
-np.save("/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/images_val.npy", y_val)
-np.save("/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/images_test.npy", y_test)
+np.save("/scratch/bggjem001/pet_datasets/datasets/images_train_sn.npy", y_train)
+np.save("/scratch/bggjem001/pet_datasets/datasets/images_val_sn.npy", y_val)
+np.save("/scratch/bggjem001/pet_datasets/datasets/images_test_sn.npy", y_test)
 
-np.save("/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/sinograms_train.npy", X_train)
-np.save("/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/sinograms_val.npy", X_val)
-np.save("/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/datasets/sinograms_test.npy", X_test)
+np.save("/scratch/bggjem001/pet_datasets/datasets/sinograms_train.npy", X_train)
+np.save("/scratch/bggjem001/pet_datasets/datasets/sinograms_val.npy", X_val)
+np.save("/scratch/bggjem001/pet_datasets/datasets/sinograms_test.npy", X_test)
 

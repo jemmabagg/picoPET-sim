@@ -13,3 +13,10 @@ def crop_to_square(img):
 def normalise(img):
     img = img.astype(np.float32)
     return (img - img.min()) / (img.max() - img.min() + 1e-8)
+
+def sum_normalise(im, target_sum=1.0):
+    """Rescale image so pixel values sum to target_sum."""
+    total = im.sum()
+    if total <= 0:
+        return im
+    return im * (target_sum / total)

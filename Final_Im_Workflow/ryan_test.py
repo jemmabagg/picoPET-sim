@@ -27,9 +27,12 @@ n_ims = test_ims_sn.shape[0]
 #Getting the MLEM iterations
 
 it = 9
-noise_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0] 
+noise_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
 
 global_dr = float(test_ims_sn.max() - test_ims_sn.min())
+
+idx = 0              # the single slice from Ryan
+display_noise = 0    # which trained model's output to visualise (0 = clean)
 
 ssim_mlem, ssim_extra = [], []
 psnr_mlem, psnr_extra = [], []
@@ -63,6 +66,12 @@ for noise in noise_levels:
 
     enhanced = np.array(enhanced) / scale
 
+    # Capture GT / input / output for the comparison plot
+    if noise == display_noise:
+        gt_disp    = test_ims_sn[idx].copy()
+        input_disp = mlem_test_sn[idx].copy()
+        out_disp   = enhanced[idx].copy()
+
     #NMSE
     nmse_vals = []
     for i in range(n_ims):
@@ -73,14 +82,14 @@ for noise in noise_levels:
     ssim_vals = []
     for i in range(n_ims):
         ssim_vals.append(ssim(test_ims_sn[i], mlem_test_sn[i], data_range=global_dr))
-    
+
     ssim_mlem.append(np.mean(ssim_vals))
 
     #Getting PSNR vals for normal MLEM
     psnr_vals = []
     for i in range(n_ims):
         psnr_vals.append(psnr(test_ims_sn[i], mlem_test_sn[i], data_range=global_dr))
-    
+
     psnr_mlem.append(np.mean(psnr_vals))
 
     #NMSE
@@ -93,16 +102,16 @@ for noise in noise_levels:
     ssim_vals = []
     for i in range(n_ims):
         ssim_vals.append(ssim(test_ims_sn[i], enhanced[i], data_range=global_dr))
-    
+
     ssim_extra.append(np.mean(ssim_vals))
 
     #PSNR for extra-CNN
     psnr_vals = []
     for i in range(n_ims):
         psnr_vals.append(psnr(test_ims_sn[i], enhanced[i], data_range=global_dr))
-    
+
     psnr_extra.append(np.mean(psnr_vals))
-    
+
     #Sanity check: confirm outliers no longer dominate the comparison
     print(f"noise={noise} | "
           f"GT sum mean: {test_ims_sn.sum(axis=(1,2)).mean():.4f} | "
@@ -114,7 +123,7 @@ for noise in noise_levels:
     torch.cuda.empty_cache()
 
 noise_levels = np.array(noise_levels)
-    
+
 
 fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
@@ -138,4 +147,24 @@ axes[2].legend()
 
 plt.tight_layout()
 plt.savefig(f"{base}/Plots/metrics_vs_noise_ryan.png", dpi=300, bbox_inches='tight')
+plt.show()
+
+# ---- GT / input / output comparison for Ryan's slice ----
+vmax = max(gt_disp.max(), input_disp.max(), out_disp.max())
+
+fig2, ax2 = plt.subplots(1, 3, figsize=(15, 5))
+panels = [
+    (gt_disp,    "Ground truth"),
+    (input_disp, "MLEM input"),
+    (out_disp,   f"extra-CNN output (noise={display_noise})"),
+]
+for a, (img, title) in zip(ax2, panels):
+    m = a.imshow(img, cmap="magma", vmin=0, vmax=vmax)
+    a.set_title(title)
+    a.axis("off")
+    fig2.colorbar(m, ax=a, fraction=0.046, pad=0.04)
+
+fig2.suptitle("Ryan slice: extra-CNN reconstruction")
+plt.tight_layout()
+plt.savefig(f"{base}/Plots/ryan_slice_gt_input_output.png", dpi=300, bbox_inches="tight")
 plt.show()

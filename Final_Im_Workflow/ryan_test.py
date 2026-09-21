@@ -15,6 +15,10 @@ base = "/scratch/bggjem001/pet_datasets"
 #Loading test images (min-max normalised for CNN input compatibility)
 #test_ims_sn = np.load(f"{base}/datasets/images_test_sn.npy")
 test_ims_sn = np.load(f"{base}/Ryan_Data/truth_blurred_4_182.npy")
+
+if test_ims_sn.ndim == 2:
+    test_ims_sn = test_ims_sn[None, ...]  
+
 '''test_ims_mm = np.array([normalise(im) for im in test_ims_raw])  # for CNN-related ops if needed
 
 #Sum-normalised ground truth for metric comparison
@@ -45,6 +49,9 @@ for noise in noise_levels:
 
     #Loading MLEM test images
     mlem_test_raw = np.load(f"{base}/Ryan_Data/reco_4_182.npy")
+
+    if mlem_test_raw.ndim == 2:
+        mlem_test_raw = mlem_test_raw[None, ...] 
     #mlem_test_mm = np.array([normalise(im) for im in mlem_test_raw])
 
     #Sum-normalised version of MLEM reconstructions for metric comparison

@@ -19,9 +19,8 @@ scale = 182 * 182
 images_train_scaled = images_train * scale
 images_val_scaled = images_val * scale
 
-noise_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
-
-noise_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
+#noise_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
+noise_levels = [3.5, 4.0, 4.5]
 
 save_every = 3
 

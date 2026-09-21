@@ -153,7 +153,7 @@ axes[2].set_ylabel("PSNR")
 axes[2].legend()
 
 plt.tight_layout()
-plt.savefig(f"{base}/Plots/metrics_vs_noise_ryan.png", dpi=300, bbox_inches='tight')
+plt.savefig(f"/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/Plots/metrics_vs_noise_ryan.png", dpi=300, bbox_inches='tight')
 plt.show()
 
 # ---- GT / input / output comparison for Ryan's slice ----
@@ -173,5 +173,5 @@ for a, (img, title) in zip(ax2, panels):
 
 fig2.suptitle("Ryan slice: extra-CNN reconstruction")
 plt.tight_layout()
-plt.savefig(f"{base}/Plots/ryan_slice_gt_input_output.png", dpi=300, bbox_inches="tight")
+plt.savefig(f"/scratch/bggjem001/picoPET-sim/Final_Im_Workflow/Plots/ryan_slice_gt_input_output.png", dpi=300, bbox_inches="tight")
 plt.show()
